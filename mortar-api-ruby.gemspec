@@ -24,6 +24,7 @@ Gem::Specification.new do |gem|
   gem.add_development_dependency 'gem-release'  
   gem.add_development_dependency 'rake'
   gem.add_development_dependency "rr"
-  gem.add_development_dependency "rspec"
+  # Use latest 2.x for rspec.  3.x breaks test configuration and various assertions
+  gem.add_development_dependency "rspec", '~>2.0'
   
 end
