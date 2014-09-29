@@ -132,7 +132,24 @@ module Mortar
         :body     => json_encode(body))
     end
 
+    def post_luigi_job(project_name, luigiscript_name, git_ref, options={})
+      parameters = options[:parameters] || {}
+      body = { "project_name" => project_name,
+        "git_ref" => git_ref,
+        "luigiscript_name" => luigiscript_name,
+        "parameters" => parameters,
+        "job_type" => Jobs::JOB_TYPE_LUIGI
+      }
+      unless options[:project_script_path].nil?
+        body["project_script_path"] = options[:project_script_path]
+      end
 
+      request(
+        :expects  => 200,
+        :method   => :post,
+        :path     => versioned_path("/jobs"),
+        :body     => json_encode(body))
+    end
 
     # GET /vX/jobs
     def get_jobs(skip, limit, job_type=Jobs::JOB_TYPE_PIG)

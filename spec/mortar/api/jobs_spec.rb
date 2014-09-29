@@ -30,6 +30,32 @@ describe Mortar::API do
   end
 
   context "jobs" do
+    it "posts a luigi job" do
+      job_id = "7b93e4d3ab034188a0c2be418d3d24ed"
+      project_name = "my_project"
+      pigscript_name = "my_luigiscript"
+      project_script_path = "luigiscripts/"
+      git_ref = "e20395b8b06fbf52e86665b0660209673f311d1a"
+      parameters = {"my-first-param" => 1, "MY-SECOND-PARAM" => "TWO"}
+      body = Mortar::API::OkJson.encode({"project_name" => project_name,
+                                         "git_ref" => git_ref,
+                                         "luigiscript_name" => pigscript_name,
+                                         "parameters" => parameters,
+                                         "job_type" => "luigi",
+                                         "project_script_path" => project_script_path})
+      Excon.stub({:method => :post, :path => "/v2/jobs", :body => body}) do |params|
+        {:body => Mortar::API::OkJson.encode({'job_id' => job_id}), :status => 200}
+      end
+
+      response = @api.post_luigi_job(
+        project_name, 
+        pigscript_name, 
+        git_ref, 
+        :parameters => parameters, 
+        :project_script_path => project_script_path)
+      response.body['job_id'].should == job_id
+    end
+
     it "posts a pig job for an existing cluster" do
       job_id = "7b93e4d3ab034188a0c2be418d3d24ed"
       project_name = "my_project"
