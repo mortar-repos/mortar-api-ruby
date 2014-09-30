@@ -50,11 +50,15 @@ module Mortar
       CLUSTER_TYPE__SINGLE_JOB = 'single_job'
       CLUSTER_TYPE__PERSISTENT = 'persistent'
       CLUSTER_TYPE__PERMANENT = 'permanent'
+
+      JOB_TYPE_ALL   = 'all'
+      JOB_TYPE_PIG   = 'pig'
+      JOB_TYPE_LUIGI = 'luigi'
     end
     
     
     # POST /vX/jobs
-    def post_job_existing_cluster(project_name, script_name, git_ref, cluster_id, options={})
+    def post_pig_job_existing_cluster(project_name, script_name, git_ref, cluster_id, options={})
       parameters = options[:parameters] || {}
       notify_on_job_finish = options[:notify_on_job_finish].nil? ? true : options[:notify_on_job_finish]
       is_control_script = options[:is_control_script] || false
@@ -63,7 +67,8 @@ module Mortar
         "git_ref" => git_ref,
         "cluster_id" => cluster_id,
         "parameters" => parameters,
-        "notify_on_job_finish" => notify_on_job_finish
+        "notify_on_job_finish" => notify_on_job_finish,
+        "job_type" => Jobs::JOB_TYPE_PIG
       }
       
       if is_control_script
@@ -88,9 +93,8 @@ module Mortar
         :body     => json_encode(body))
     end
 
-    
     # POST /vX/jobs
-    def post_job_new_cluster(project_name, script_name, git_ref, cluster_size, options={})
+    def post_pig_job_new_cluster(project_name, script_name, git_ref, cluster_size, options={})
       cluster_type = options[:cluster_type].nil? ? Jobs::CLUSTER_TYPE__PERSISTENT : options[:cluster_type]
       notify_on_job_finish = options[:notify_on_job_finish].nil? ? true : options[:notify_on_job_finish]
       use_spot_instances = options[:use_spot_instances].nil? ? false : options[:use_spot_instances]
@@ -103,6 +107,7 @@ module Mortar
         "cluster_type" => cluster_type,
         "parameters" => parameters,
         "notify_on_job_finish" => notify_on_job_finish,
+        "job_type" => Jobs::JOB_TYPE_PIG,
         "use_spot_instances" => use_spot_instances
       }
       if is_control_script
@@ -127,14 +132,33 @@ module Mortar
         :body     => json_encode(body))
     end
 
+    def post_luigi_job(project_name, luigiscript_name, git_ref, options={})
+      parameters = options[:parameters] || {}
+      body = { "project_name" => project_name,
+        "git_ref" => git_ref,
+        "luigiscript_name" => luigiscript_name,
+        "parameters" => parameters,
+        "job_type" => Jobs::JOB_TYPE_LUIGI
+      }
+      unless options[:project_script_path].nil?
+        body["project_script_path"] = options[:project_script_path]
+      end
+
+      request(
+        :expects  => 200,
+        :method   => :post,
+        :path     => versioned_path("/jobs"),
+        :body     => json_encode(body))
+    end
+
     # GET /vX/jobs
-    def get_jobs(skip, limit)
+    def get_jobs(skip, limit, job_type=Jobs::JOB_TYPE_PIG)
       request(
         :expects  => 200,
         :idempotent => true,
         :method   => :get,
         :path     => versioned_path("/jobs"),
-        :query    => { :skip => skip, :limit => limit }
+        :query    => { job_type => job_type, :skip => skip, :limit => limit }
       )
     end
     
@@ -157,5 +181,18 @@ module Mortar
         :path    => versioned_path("/jobs/#{job_id}")
       )
     end
+
+    # <b>DEPRECATED:</b> Please use <tt>post_pig_job_existing_cluster</tt> instead.
+    def post_job_existing_cluster(project_name, script_name, git_ref, cluster_id, options={})
+      warn "[DEPRECATION] 'post_job_existing_cluster' is deprecated.  Please use 'post_pig_job_existing_cluster' instead."
+      post_pig_job_existing_cluster(project_name, script_name, git_ref, cluster_id, options=options)
+    end
+
+    # <b>DEPRECATED:</b> Please use <tt>post_pig_job_new_cluster</tt> instead.
+    def post_job_new_cluster(project_name, script_name, git_ref, cluster_size, options={})
+      warn "[DEPRECATION] 'post_job_new_cluster' is deprecated.  Please use 'post_pig_job_new_cluster' instead."
+      post_pig_job_new_cluster(project_name, script_name, git_ref, cluster_size, options=options)
+    end
+
   end
 end

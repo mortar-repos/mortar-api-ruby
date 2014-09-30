@@ -30,7 +30,33 @@ describe Mortar::API do
   end
 
   context "jobs" do
-    it "posts a job for an existing cluster" do
+    it "posts a luigi job" do
+      job_id = "7b93e4d3ab034188a0c2be418d3d24ed"
+      project_name = "my_project"
+      pigscript_name = "my_luigiscript"
+      project_script_path = "luigiscripts/"
+      git_ref = "e20395b8b06fbf52e86665b0660209673f311d1a"
+      parameters = {"my-first-param" => 1, "MY-SECOND-PARAM" => "TWO"}
+      body = Mortar::API::OkJson.encode({"project_name" => project_name,
+                                         "git_ref" => git_ref,
+                                         "luigiscript_name" => pigscript_name,
+                                         "parameters" => parameters,
+                                         "job_type" => "luigi",
+                                         "project_script_path" => project_script_path})
+      Excon.stub({:method => :post, :path => "/v2/jobs", :body => body}) do |params|
+        {:body => Mortar::API::OkJson.encode({'job_id' => job_id}), :status => 200}
+      end
+
+      response = @api.post_luigi_job(
+        project_name, 
+        pigscript_name, 
+        git_ref, 
+        :parameters => parameters, 
+        :project_script_path => project_script_path)
+      response.body['job_id'].should == job_id
+    end
+
+    it "posts a pig job for an existing cluster" do
       job_id = "7b93e4d3ab034188a0c2be418d3d24ed"
       project_name = "my_project"
       pigscript_name = "my_pigscript"
@@ -43,15 +69,30 @@ describe Mortar::API do
                                          "cluster_id" => cluster_id,
                                          "parameters" => parameters,
                                          "notify_on_job_finish" => true,
+                                         "job_type" => "pig",
                                          "pigscript_name" => pigscript_name,
-                                         "project_script_path" => project_script_path,
-
-})
+                                         "project_script_path" => project_script_path})
       Excon.stub({:method => :post, :path => "/v2/jobs", :body => body}) do |params|
         {:body => Mortar::API::OkJson.encode({'job_id' => job_id}), :status => 200}
       end
-      response = @api.post_job_existing_cluster(project_name, pigscript_name, git_ref, cluster_id, :parameters => parameters, :project_script_path => project_script_path)
+
+      response = @api.post_pig_job_existing_cluster(
+        project_name, 
+        pigscript_name, 
+        git_ref, 
+        cluster_id, 
+        :parameters => parameters, 
+        :project_script_path => project_script_path)
       response.body['job_id'].should == job_id
+
+      response_deprecated = @api.post_job_existing_cluster(
+        project_name, 
+        pigscript_name, 
+        git_ref, 
+        cluster_id, 
+        :parameters => parameters, 
+        :project_script_path => project_script_path)
+      response_deprecated.body['job_id'].should == job_id
     end
 
     it "posts a job for a new cluster, defaulting cluster_type to persistent" do
@@ -67,14 +108,17 @@ describe Mortar::API do
                                          "cluster_type" => cluster_type,
                                          "parameters" => {},
                                          "notify_on_job_finish" => true,
+                                         "job_type" => "pig",
                                          "use_spot_instances" => false,
-                                         "pigscript_name" => pigscript_name
-})
+                                         "pigscript_name" => pigscript_name})
       Excon.stub({:method => :post, :path => "/v2/jobs", :body => body}) do |params|
         {:body => Mortar::API::OkJson.encode({'job_id' => job_id}), :status => 200}
       end
-      response = @api.post_job_new_cluster(project_name, pigscript_name, git_ref, cluster_size)
+      response = @api.post_pig_job_new_cluster(project_name, pigscript_name, git_ref, cluster_size)
       response.body['job_id'].should == job_id
+
+      response_deprecated = @api.post_job_new_cluster(project_name, pigscript_name, git_ref, cluster_size)
+      response_deprecated.body['job_id'].should == job_id
     end
 
     it "posts a job for a new cluster, defaulting to notify_on_job_finish of true" do
@@ -91,6 +135,7 @@ describe Mortar::API do
                                          "cluster_type" => cluster_type,
                                          "parameters" => {},
                                          "notify_on_job_finish" => true,
+                                         "job_type" => "pig",
                                          "use_spot_instances" => false,
                                          "pigscript_name" => pigscript_name,
                                          "project_script_path" => project_script_path,
@@ -98,8 +143,11 @@ describe Mortar::API do
       Excon.stub({:method => :post, :path => "/v2/jobs", :body => body}) do |params|
         {:body => Mortar::API::OkJson.encode({'job_id' => job_id}), :status => 200}
       end
-      response = @api.post_job_new_cluster(project_name, pigscript_name, git_ref, cluster_size, :project_script_path => project_script_path)
+      response = @api.post_pig_job_new_cluster(project_name, pigscript_name, git_ref, cluster_size, :project_script_path => project_script_path)
       response.body['job_id'].should == job_id
+
+      response_deprecated = @api.post_job_new_cluster(project_name, pigscript_name, git_ref, cluster_size, :project_script_path => project_script_path)
+      response_deprecated.body['job_id'].should == job_id
     end
 
     it "accepts non-default params for notify_on_job_finish and use_spot_instances" do
@@ -116,6 +164,7 @@ describe Mortar::API do
                                          "cluster_type" => cluster_type,
                                          "parameters" => {},
                                          "notify_on_job_finish" => false,
+                                         "job_type" => "pig",
                                          "use_spot_instances" => true,
                                          "pigscript_name" => pigscript_name,
                                          "project_script_path" => project_script_path,
@@ -123,11 +172,16 @@ describe Mortar::API do
       Excon.stub({:method => :post, :path => "/v2/jobs", :body => body}) do |params|
         {:body => Mortar::API::OkJson.encode({'job_id' => job_id}), :status => 200}
       end
-      response = @api.post_job_new_cluster(project_name, pigscript_name, git_ref, cluster_size, 
+      response = @api.post_pig_job_new_cluster(project_name, pigscript_name, git_ref, cluster_size, 
             :cluster_type => cluster_type, :notify_on_job_finish => false, 
             :use_spot_instances => true,
             :project_script_path => project_script_path)
       response.body['job_id'].should == job_id
+      response_deprecated = @api.post_job_new_cluster(project_name, pigscript_name, git_ref, cluster_size, 
+            :cluster_type => cluster_type, :notify_on_job_finish => false, 
+            :use_spot_instances => true,
+            :project_script_path => project_script_path)
+      response_deprecated.body['job_id'].should == job_id
     end
     
     it "accepts cluster_type of single_job" do
@@ -144,6 +198,7 @@ describe Mortar::API do
                                          "cluster_type" => cluster_type,
                                          "parameters" => {},
                                          "notify_on_job_finish" => true,
+                                         "job_type" => "pig",
                                          "use_spot_instances" => false,
                                          "pigscript_name" => pigscript_name,
                                          "project_script_path" => project_script_path,
@@ -151,8 +206,11 @@ describe Mortar::API do
       Excon.stub({:method => :post, :path => "/v2/jobs", :body => body}) do |params|
         {:body => Mortar::API::OkJson.encode({'job_id' => job_id}), :status => 200}
       end
-      response = @api.post_job_new_cluster(project_name, pigscript_name, git_ref, cluster_size, :cluster_type => cluster_type, :project_script_path => project_script_path)
+      response = @api.post_pig_job_new_cluster(project_name, pigscript_name, git_ref, cluster_size, :cluster_type => cluster_type, :project_script_path => project_script_path)
       response.body['job_id'].should == job_id
+
+      response_deprecated = @api.post_job_new_cluster(project_name, pigscript_name, git_ref, cluster_size, :cluster_type => cluster_type, :project_script_path => project_script_path)
+      response_deprecated.body['job_id'].should == job_id
     end
 
     it "accepts cluster_type of permanent" do
@@ -169,6 +227,7 @@ describe Mortar::API do
                                          "cluster_type" => cluster_type,
                                          "parameters" => {},
                                          "notify_on_job_finish" => true,
+                                         "job_type" => "pig",
                                          "use_spot_instances" => false,
                                          "pigscript_name" => pigscript_name,
                                          "project_script_path" => project_script_path,
@@ -176,8 +235,11 @@ describe Mortar::API do
       Excon.stub({:method => :post, :path => "/v2/jobs", :body => body}) do |params|
         {:body => Mortar::API::OkJson.encode({'job_id' => job_id}), :status => 200}
       end
-      response = @api.post_job_new_cluster(project_name, pigscript_name, git_ref, cluster_size, :cluster_type => cluster_type, :project_script_path => project_script_path)
+      response = @api.post_pig_job_new_cluster(project_name, pigscript_name, git_ref, cluster_size, :cluster_type => cluster_type, :project_script_path => project_script_path)
       response.body['job_id'].should == job_id
+
+      response_deprecated = @api.post_job_new_cluster(project_name, pigscript_name, git_ref, cluster_size, :cluster_type => cluster_type, :project_script_path => project_script_path)
+      response_deprecated.body['job_id'].should == job_id
     end
 
     it "gets a job" do
@@ -196,6 +258,21 @@ describe Mortar::API do
         {:body => Mortar::API::OkJson.encode({"jobs" => [{'job_id' => '1', 'status' => 'running'}, {'job_id' => '2', 'status' => 'running'}]}), :status => 200}
       end
       response = @api.get_jobs(0, 10)
+      jobs = response.body["jobs"]
+      jobs.nil?.should be_false
+      jobs.length.should == 2
+
+      response = @api.get_jobs(0, 10, "all")
+      jobs = response.body["jobs"]
+      jobs.nil?.should be_false
+      jobs.length.should == 2
+
+      response = @api.get_jobs(0, 10, "pig")
+      jobs = response.body["jobs"]
+      jobs.nil?.should be_false
+      jobs.length.should == 2
+
+      response = @api.get_jobs(0, 10, "luigi")
       jobs = response.body["jobs"]
       jobs.nil?.should be_false
       jobs.length.should == 2
