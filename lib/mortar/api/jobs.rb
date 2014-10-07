@@ -33,19 +33,33 @@ module Mortar
       STATUS_STOPPING          = "stopping"
       STATUS_STOPPED           = "stopped"
 
+      LUIGI_JOB_STATUS__PENDING           = 'pending'
+      LUIGI_JOB_STATUS__STARTING          = 'starting'
+      LUIGI_JOB_STATUS__RUNNING           = 'running'
+      LUIGI_JOB_STATUS__FINISHED          = 'finished'
+      LUIGI_JOB_STATUS__STOPPED           = 'stopped'
+      LUIGI_JOB_STATUS__STOPPING          = 'stopping'
+
+
       STATUSES_IN_PROGRESS    = Set.new([STATUS_STARTING,
                                          STATUS_GATEWAY_STARTING,
                                          STATUS_VALIDATING_SCRIPT, 
                                          STATUS_STARTING_CLUSTER, 
                                          STATUS_RUNNING, 
-                                         STATUS_STOPPING])
+                                         STATUS_STOPPING,
+                                         LUIGI_JOB_STATUS__PENDING,
+                                         LUIGI_JOB_STATUS__STARTING,
+                                         LUIGI_JOB_STATUS__RUNNING,
+                                         LUIGI_JOB_STATUS__STOPPING])
 
       STATUSES_COMPLETE       = Set.new([STATUS_SCRIPT_ERROR, 
                                         STATUS_PLAN_ERROR,
                                         STATUS_SUCCESS,
                                         STATUS_EXECUTION_ERROR,
                                         STATUS_SERVICE_ERROR,
-                                        STATUS_STOPPED])
+                                        STATUS_STOPPED,
+                                        LUIGI_JOB_STATUS__FINISHED,
+                                        LUIGI_JOB_STATUS__STOPPED])
 
       CLUSTER_TYPE__SINGLE_JOB = 'single_job'
       CLUSTER_TYPE__PERSISTENT = 'persistent'
