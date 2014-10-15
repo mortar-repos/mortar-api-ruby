@@ -62,7 +62,7 @@ module Mortar
         :host     => 'api.mortardata.com',
         :retry_limit => 5,
         :scheme   => 'https',
-        :ssl_version => 'SSLv3'
+        :ssl_version => :TLSv1
       }.merge(options)
       options[:headers] = {
         'Accept'                => 'application/json',
