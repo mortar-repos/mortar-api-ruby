@@ -40,6 +40,11 @@ module Mortar
       LUIGI_JOB_STATUS__STOPPED           = 'stopped'
       LUIGI_JOB_STATUS__STOPPING          = 'stopping'
 
+      SPARK_JOB_STATUS__PENDING  = "pending"
+      SPARK_JOB_STATUS__STARTING = "starting"
+      SPARK_JOB_STATUS__RUNNING  = "running"
+      SPARK_JOB_STATUS__FINISHED = "finished"
+
 
       STATUSES_IN_PROGRESS    = Set.new([STATUS_STARTING,
                                          STATUS_GATEWAY_STARTING,
@@ -50,7 +55,10 @@ module Mortar
                                          LUIGI_JOB_STATUS__PENDING,
                                          LUIGI_JOB_STATUS__STARTING,
                                          LUIGI_JOB_STATUS__RUNNING,
-                                         LUIGI_JOB_STATUS__STOPPING])
+                                         LUIGI_JOB_STATUS__STOPPING,
+                                         SPARK_JOB_STATUS__PENDING,
+                                         SPARK_JOB_STATUS__STARTING,
+                                         SPARK_JOB_STATUS__RUNNING])
 
       STATUSES_COMPLETE       = Set.new([STATUS_SCRIPT_ERROR, 
                                         STATUS_PLAN_ERROR,
@@ -59,15 +67,21 @@ module Mortar
                                         STATUS_SERVICE_ERROR,
                                         STATUS_STOPPED,
                                         LUIGI_JOB_STATUS__FINISHED,
-                                        LUIGI_JOB_STATUS__STOPPED])
+                                        LUIGI_JOB_STATUS__STOPPED,
+                                        SPARK_JOB_STATUS__FINISHED])
 
       CLUSTER_TYPE__SINGLE_JOB = 'single_job'
       CLUSTER_TYPE__PERSISTENT = 'persistent'
       CLUSTER_TYPE__PERMANENT = 'permanent'
 
+      CLUSTER_BACKEND__EMR_HADOOP_1 = "EMR_HADOOP_1"
+      CLUSTER_BACKEND__EMR_HADOOP_2 = "EMR_HADOOP_2"
+      CLUSTER_BACKEND__ALL          = "ALL"
+
       JOB_TYPE_ALL   = 'all'
       JOB_TYPE_PIG   = 'pig'
       JOB_TYPE_LUIGI = 'luigi'
+      JOB_TYPE_SPARK = 'spark'
     end
     
     
@@ -119,6 +133,7 @@ module Mortar
         "git_ref" => git_ref,
         "cluster_size" => cluster_size,
         "cluster_type" => cluster_type,
+        "cluster_backend" => Jobs::CLUSTER_BACKEND__EMR_HADOOP_1,
         "parameters" => parameters,
         "notify_on_job_finish" => notify_on_job_finish,
         "job_type" => Jobs::JOB_TYPE_PIG,
@@ -154,6 +169,56 @@ module Mortar
         "parameters" => parameters,
         "job_type" => Jobs::JOB_TYPE_LUIGI
       }
+      unless options[:project_script_path].nil?
+        body["project_script_path"] = options[:project_script_path]
+      end
+
+      request(
+        :expects  => 200,
+        :method   => :post,
+        :path     => versioned_path("/jobs"),
+        :body     => json_encode(body))
+    end
+
+    def post_spark_job_new_cluster(project_name, sparkscript_name, git_ref, cluster_size, options={})
+      script_arguments = options[:script_arguments] || ""
+      use_spot_instances = options[:use_spot_instances].nil? ? false : options[:use_spot_instances]
+      cluster_type = options[:cluster_type].nil? ? Jobs::CLUSTER_TYPE__PERSISTENT : options[:cluster_type]
+
+
+      body = { "project_name" => project_name,
+        "git_ref" => git_ref,
+        "cluster_size" => cluster_size,
+        "cluster_type" => cluster_type,
+        "cluster_backend" => Jobs::CLUSTER_BACKEND__EMR_HADOOP_2,
+        "script_arguments" => script_arguments,
+        "job_type" => Jobs::JOB_TYPE_SPARK,
+        "use_spot_instances" => use_spot_instances,
+        "sparkscript_name" => sparkscript_name
+      }
+
+      unless options[:project_script_path].nil?
+        body["project_script_path"] = options[:project_script_path]
+      end
+
+      request(
+        :expects  => 200,
+        :method   => :post,
+        :path     => versioned_path("/jobs"),
+        :body     => json_encode(body))
+    end
+
+    def post_spark_job_existing_cluster(project_name, sparkscript_name, git_ref, cluster_id, options={})
+      script_arguments = options[:script_arguments] || ""      
+
+      body = {"project_name" => project_name,
+        "git_ref" => git_ref,
+        "cluster_id" => cluster_id,
+        "script_arguments" => script_arguments,
+        "job_type" => Jobs::JOB_TYPE_SPARK,
+        "sparkscript_name" => sparkscript_name
+      }
+
       unless options[:project_script_path].nil?
         body["project_script_path"] = options[:project_script_path]
       end
