@@ -33,7 +33,8 @@ module Mortar
         :expects  => 200,
         :idempotent => true,
         :method   => :get,
-        :path     => "#{versioned_path("/clusters")}?cluster_backend=#{cluster_backend}"
+        :path     => "#{versioned_path("/clusters")}",
+        :query    => {:cluster_backend => cluster_backend}
       )
     end 
     
