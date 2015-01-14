@@ -106,6 +106,7 @@ describe Mortar::API do
                                          "git_ref" => git_ref,
                                          "cluster_size" => cluster_size,
                                          "cluster_type" => cluster_type,
+                                         "cluster_backend" => Mortar::API::Jobs::CLUSTER_BACKEND__EMR_HADOOP_1,
                                          "parameters" => {},
                                          "notify_on_job_finish" => true,
                                          "job_type" => "pig",
@@ -133,6 +134,7 @@ describe Mortar::API do
                                          "git_ref" => git_ref,
                                          "cluster_size" => cluster_size,
                                          "cluster_type" => cluster_type,
+                                         "cluster_backend" => Mortar::API::Jobs::CLUSTER_BACKEND__EMR_HADOOP_1,
                                          "parameters" => {},
                                          "notify_on_job_finish" => true,
                                          "job_type" => "pig",
@@ -162,6 +164,7 @@ describe Mortar::API do
                                          "git_ref" => git_ref,
                                          "cluster_size" => cluster_size,
                                          "cluster_type" => cluster_type,
+                                         "cluster_backend" => Mortar::API::Jobs::CLUSTER_BACKEND__EMR_HADOOP_1,
                                          "parameters" => {},
                                          "notify_on_job_finish" => false,
                                          "job_type" => "pig",
@@ -196,6 +199,7 @@ describe Mortar::API do
                                          "git_ref" => git_ref,
                                          "cluster_size" => cluster_size,
                                          "cluster_type" => cluster_type,
+                                         "cluster_backend" => Mortar::API::Jobs::CLUSTER_BACKEND__EMR_HADOOP_1,
                                          "parameters" => {},
                                          "notify_on_job_finish" => true,
                                          "job_type" => "pig",
@@ -225,6 +229,7 @@ describe Mortar::API do
                                          "git_ref" => git_ref,
                                          "cluster_size" => cluster_size,
                                          "cluster_type" => cluster_type,
+                                         "cluster_backend" => Mortar::API::Jobs::CLUSTER_BACKEND__EMR_HADOOP_1,
                                          "parameters" => {},
                                          "notify_on_job_finish" => true,
                                          "job_type" => "pig",
@@ -285,6 +290,58 @@ describe Mortar::API do
       end
       response = @api.stop_job(job_id)
       response.body["success"].should be_true
+    end
+
+    it "posts a spark job for a new cluster, defaulting cluster_type to persistent" do
+      job_id = "7b93e4d3ab034188a0c2be418d3d24ed"
+      project_name = "my_project"
+      sparkscript_name = "my_sparkscript"
+      git_ref = "e20395b8b06fbf52e86665b0660209673f311d1a"
+      cluster_size = 5
+      cluster_type = Mortar::API::Jobs::CLUSTER_TYPE__PERSISTENT
+      body = Mortar::API::OkJson.encode({"project_name" => project_name,
+                                         "git_ref" => git_ref,
+                                         "cluster_size" => cluster_size,
+                                         "cluster_type" => cluster_type,
+                                         "cluster_backend" => Mortar::API::Jobs::CLUSTER_BACKEND__EMR_HADOOP_2,
+                                         "script_arguments" => "",
+                                         "job_type" => "spark",
+                                         "use_spot_instances" => false,
+                                         "sparkscript_name" => sparkscript_name})
+      Excon.stub({:method => :post, :path => "/v2/jobs", :body => body}) do |params|
+        {:body => Mortar::API::OkJson.encode({'job_id' => job_id}), :status => 200}
+      end
+      response = @api.post_spark_job_new_cluster(project_name, sparkscript_name, git_ref, cluster_size)
+      response.body['job_id'].should == job_id
+    end
+
+    it "posts a spark job for an existing cluster" do
+      job_id = "7b93e4d3ab034188a0c2be418d3d24ed"
+      project_name = "my_project"
+      sparkscript_name = "my_sparkscript"
+      project_script_path = "sparkscripts/"
+      git_ref = "e20395b8b06fbf52e86665b0660209673f311d1a"
+      cluster_id = "f82c774f7ccd429e91db996838cb6c4a"
+      script_arguments = "some script args"
+      body = Mortar::API::OkJson.encode({"project_name" => project_name,
+                                         "git_ref" => git_ref,
+                                         "cluster_id" => cluster_id,
+                                         "script_arguments" => script_arguments,
+                                         "job_type" => "spark",
+                                         "sparkscript_name" => sparkscript_name,
+                                         "project_script_path" => project_script_path})
+      Excon.stub({:method => :post, :path => "/v2/jobs", :body => body}) do |params|
+        {:body => Mortar::API::OkJson.encode({'job_id' => job_id}), :status => 200}
+      end
+
+      response = @api.post_spark_job_existing_cluster(
+        project_name, 
+        sparkscript_name, 
+        git_ref, 
+        cluster_id, 
+        :script_arguments => script_arguments, 
+        :project_script_path => project_script_path)
+      response.body['job_id'].should == job_id
     end
   end
 end

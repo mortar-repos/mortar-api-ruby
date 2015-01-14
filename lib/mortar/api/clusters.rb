@@ -28,12 +28,13 @@ module Mortar
     end
     
     # GET /vX/clusters
-    def get_clusters()
+    def get_clusters(cluster_backend=Mortar::API::Jobs::CLUSTER_BACKEND__EMR_HADOOP_1)
       request(
         :expects  => 200,
         :idempotent => true,
         :method   => :get,
-        :path     => versioned_path("/clusters")
+        :path     => "#{versioned_path("/clusters")}",
+        :query    => {:cluster_backend => cluster_backend}
       )
     end 
     
